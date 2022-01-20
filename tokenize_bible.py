@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 
+import re
 import os
 import shutil
 import urllib.request
+import pandas as pd 
+
 from nltk.tokenize import sent_tokenize
+
+
+sentence_id = 0
 
 
 def download_txt(document_url, out_name):
@@ -87,7 +93,7 @@ def split_testaments(lines):
             end_idx = num
             break
 
-    return delete_empty_lines(lines[start_idx: split_idx]), delete_empty_lines(lines[split_idx: end_idx]), split_idx
+    return delete_empty_lines(lines[start_idx: split_idx]), delete_empty_lines(lines[split_idx: end_idx])
 
 
 def get_books(toc, testament):
@@ -105,23 +111,62 @@ def get_books(toc, testament):
                     books[section] = [i]
                     books[previous_section].append(i)
                 if num == len(toc)-1:
-                    books[section].append(len(testament)-1)
+                    books[section].append(len(testament))
 
                 prev_idx = i + 1
 
     return books
 
 
-def write_testament(books, testament): 
-    """ Write the testament data and all its book to files """
+def get_book_text(books, testament):
+    """ Get the text of a book in each testament """
     texts = {}
 
     for book, idcs in books.items(): 
-        print(idcs)
-        text_arr = testament[idcs[0] : idcs[1]+1]
+        text_arr = testament[idcs[0] : idcs[1]]
         texts[book] =  " ".join(text_arr) 
 
-    print(texts)
+    return texts
+
+
+def delete_psalm_identifiers(tokenized): 
+    """ Find the psalm identifiers and link them to their corresponding content """
+    cleaned = []
+    for sent in tokenized: 
+        psalm_id = re.match("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", sent)
+
+        if not psalm_id:
+            cleaned.append(sent)
+
+    return cleaned
+
+
+def write_testament(books, testament, testament_id): 
+    """ Write the testament data and all its book to files """
+    global sentence_id
+
+    texts = get_book_text(books, testament)
+    folder = "old_testament" if testament_id == "old" else "new_testament"
+
+    for book, text in texts.items():
+        title_modified = book.lower().replace(" ", "_")
+        file_name = f"{title_modified}.csv"
+
+        tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
+        cleaned_tokens = delete_psalm_identifiers(tokens)
+
+        data = []
+        for sent in cleaned_tokens:
+            data.append({"id": sentence_id, "length": len(sent), "sentence": sent})
+            sentence_id += 1
+
+        df = pd.DataFrame(data=data)
+        df.to_csv(f"{folder}/{file_name}")
+        print(f"{folder}/{file_name}")
+
+
+def get_key_words():
+    pass 
 
 
 def main():
@@ -134,13 +179,13 @@ def main():
     with open(out_name) as f:
         lines = f.readlines()
         old_toc, new_toc = get_contents(lines)
-        old_testament, new_testament, split_idx = split_testaments(lines)
+        old_testament, new_testament = split_testaments(lines)
 
         old_books = get_books(old_toc, old_testament)
         new_books = get_books(new_toc, new_testament)
 
-        write_testament(old_books, old_testament)
-        # write_testament(new_books, new_testament)
+        write_testament(old_books, old_testament, "old")
+        write_testament(new_books, new_testament, "new")
 
 
 if __name__ == "__main__":
