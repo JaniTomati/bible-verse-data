@@ -141,9 +141,31 @@ def delete_psalm_identifiers(tokenized):
     return cleaned
 
 
+def psalm_tokenize(text):
+    """ Tokenize the text into the given psalms """
+    psalms = []
+
+    indices = []
+    values = []
+
+    for match in re.finditer("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", text):
+        indices.append(match.start())
+        values.append(match.group())
+
+    for i, idx in enumerate(indices):
+        psalm = values[i]
+        start = idx
+        end = len(text)-1 if i == len(indices)-1 else indices[i+1]
+
+        psalms.append({"psalm": psalm, "length": text[start:end], "text": text[start:end]})
+
+    return psalms
+
+
 def write_testament(books, testament, testament_id): 
     """ Write the testament data and all its book to files """
     global sentence_id
+    tokenization = "psalms" # else psalms 
 
     texts = get_book_text(books, testament)
     folder = "old_testament" if testament_id == "old" else "new_testament"
@@ -152,13 +174,17 @@ def write_testament(books, testament, testament_id):
         title_modified = book.lower().replace(" ", "_")
         file_name = f"{title_modified}.csv"
 
-        tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
-        cleaned_tokens = delete_psalm_identifiers(tokens)
+        # tokenize into sentences 
+        if tokenization == "sentences":
+            tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
+            cleaned_tokens = delete_psalm_identifiers(tokens)
 
-        data = []
-        for sent in cleaned_tokens:
-            data.append({"id": sentence_id, "length": len(sent), "sentence": sent})
-            sentence_id += 1
+            data = []
+            for sent in cleaned_tokens:
+                data.append({"id": sentence_id, "length": len(sent), "sentence": sent})
+                sentence_id += 1
+        else: 
+            data = psalm_tokenize(text) 
 
         df = pd.DataFrame(data=data)
         df.to_csv(f"{folder}/{file_name}")
