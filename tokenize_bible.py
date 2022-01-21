@@ -6,7 +6,7 @@ import shutil
 import urllib.request
 import pandas as pd 
 
-from nltk.tokenize import sent_tokenize
+from nltk.tokenize import sent_tokenize, word_tokenize
 
 
 sentence_id = 0
@@ -141,14 +141,15 @@ def delete_psalm_identifiers(tokenized):
     return cleaned
 
 
-def psalm_tokenize(text):
+def psalm_tokenize(text, testament_title, book_id, book_title, psalm_id):
     """ Tokenize the text into the given psalms """
     psalms = []
 
     indices = []
     values = []
+    pattern = r"\b[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\."
 
-    for match in re.finditer("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", text):
+    for match in re.finditer(pattern, text):
         indices.append(match.start())
         values.append(match.group())
 
@@ -157,15 +158,17 @@ def psalm_tokenize(text):
         start = idx 
         end = len(text)-1 if i == len(indices)-1 else indices[i+1]
 
-        psalm_id_pos = re.search("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", text[start:end]) # remove psalm identifier from the full text
+        psalm_id_pos = re.search(pattern, text[start:end]) # remove psalm identifier from the full text
         start = start + psalm_id_pos.end()
+        psalm_text = text[start:end].strip()
 
-        psalms.append({"psalm": psalm, "length": len(text[start:end]), "text": text[start:end]})
+        psalms.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "psalm_id": f"p_{psalm_id}", "psalm": psalm, "#chars": len(psalm_text), "#words": len(word_tokenize(psalm_text)), "text": psalm_text})
+        psalm_id += 1
 
-    return psalms
+    return psalms, psalm_id
 
 
-def write_testament(books, testament, testament_id): 
+# def write_testament(books, testament, testament_id): 
     """ Write the testament data and all its book to files """
     global sentence_id
     tokenization = "psalms" # else psalms 
@@ -194,8 +197,35 @@ def write_testament(books, testament, testament_id):
         print(f"{folder}/{file_name}")
 
 
-def get_key_words():
-    pass 
+def write_testament(books, testaments, titles, tokenization="psalms"): 
+    """ Write the testament data and all its book to files """
+    data = []
+    sentence_id = 1
+    psalm_id = 1
+
+    for num, testament in enumerate(testaments):
+        texts = get_book_text(books[num], testament)
+        testament_title = f"{titles[num]}_testament"
+
+        for i, (book, text) in enumerate(texts.items()):
+            file_name = f"bible_{tokenization}.csv"
+            book_id = f"b_{len(books[num-1]) + i + 1}" if num != 0 else f"b_{i+1}"
+            title_modified = book.lower().replace(" ", "_")
+
+            # tokenize into sentences 
+            if tokenization == "sentences":
+                tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
+                cleaned_tokens = delete_psalm_identifiers(tokens)
+
+                for sent in cleaned_tokens:
+                    data.append({"testament_title": testament_title, "book_id": book_id, "book_title": title_modified, "id": f"s_{sentence_id}", "#characters": len(sent), "#words": len(word_tokenize(sent)), "sentence": sent})
+                    sentence_id += 1
+            else: 
+                psalms, psalm_id = psalm_tokenize(text, testament_title, book_id, title_modified, psalm_id)
+                data += psalms
+
+    df = pd.DataFrame(data=data)
+    df.to_csv(file_name)
 
 
 def main():
@@ -213,8 +243,7 @@ def main():
         old_books = get_books(old_toc, old_testament)
         new_books = get_books(new_toc, new_testament)
 
-        write_testament(old_books, old_testament, "old")
-        write_testament(new_books, new_testament, "new")
+        write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "psalms")
 
 
 if __name__ == "__main__":
