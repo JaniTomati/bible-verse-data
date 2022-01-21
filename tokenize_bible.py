@@ -154,10 +154,13 @@ def psalm_tokenize(text):
 
     for i, idx in enumerate(indices):
         psalm = values[i]
-        start = idx
+        start = idx 
         end = len(text)-1 if i == len(indices)-1 else indices[i+1]
 
-        psalms.append({"psalm": psalm, "length": text[start:end], "text": text[start:end]})
+        psalm_id_pos = re.search("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", text[start:end]) # remove psalm identifier from the full text
+        start = start + psalm_id_pos.end()
+
+        psalms.append({"psalm": psalm, "length": len(text[start:end]), "text": text[start:end]})
 
     return psalms
 
