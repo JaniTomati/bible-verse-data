@@ -168,33 +168,18 @@ def psalm_tokenize(text, testament_title, book_id, book_title, psalm_id):
     return psalms, psalm_id
 
 
-# def write_testament(books, testament, testament_id): 
-    """ Write the testament data and all its book to files """
-    global sentence_id
-    tokenization = "psalms" # else psalms 
+def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
+    """ Tokenize the text into sentences """
+    sentences = [] 
 
-    texts = get_book_text(books, testament)
-    folder = "old_testament" if testament_id == "old" else "new_testament"
+    tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
+    cleaned_tokens = delete_psalm_identifiers(tokens)
 
-    for book, text in texts.items():
-        title_modified = book.lower().replace(" ", "_")
-        file_name = f"{title_modified}.csv"
+    for sent in cleaned_tokens:
+        sentences.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "id": f"s_{sentence_id}", "#characters": len(sent), "#words": len(word_tokenize(sent)), "sentence": sent})
+        sentence_id += 1
 
-        # tokenize into sentences 
-        if tokenization == "sentences":
-            tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
-            cleaned_tokens = delete_psalm_identifiers(tokens)
-
-            data = []
-            for sent in cleaned_tokens:
-                data.append({"id": sentence_id, "length": len(sent), "sentence": sent})
-                sentence_id += 1
-        else: 
-            data = psalm_tokenize(text) 
-
-        df = pd.DataFrame(data=data)
-        df.to_csv(f"{folder}/{file_name}")
-        print(f"{folder}/{file_name}")
+    return sentences, sentence_id
 
 
 def write_testament(books, testaments, titles, tokenization="psalms"): 
@@ -214,12 +199,8 @@ def write_testament(books, testaments, titles, tokenization="psalms"):
 
             # tokenize into sentences 
             if tokenization == "sentences":
-                tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
-                cleaned_tokens = delete_psalm_identifiers(tokens)
-
-                for sent in cleaned_tokens:
-                    data.append({"testament_title": testament_title, "book_id": book_id, "book_title": title_modified, "id": f"s_{sentence_id}", "#characters": len(sent), "#words": len(word_tokenize(sent)), "sentence": sent})
-                    sentence_id += 1
+                sentences, sentence_id = sentence_tokenize(text, testament_title, book_id, title_modified, sentence_id)
+                data += sentences
             else: 
                 psalms, psalm_id = psalm_tokenize(text, testament_title, book_id, title_modified, psalm_id)
                 data += psalms
@@ -244,6 +225,7 @@ def main():
         new_books = get_books(new_toc, new_testament)
 
         write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "psalms")
+        # write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "sentences")
 
 
 if __name__ == "__main__":
