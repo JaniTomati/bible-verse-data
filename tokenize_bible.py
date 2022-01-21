@@ -129,21 +129,21 @@ def get_book_text(books, testament):
     return texts
 
 
-def delete_psalm_identifiers(tokenized): 
-    """ Find the psalm identifiers and link them to their corresponding content """
+def delete_verse_identifiers(tokenized): 
+    """ Find the bible verse identifiers and link them to their corresponding content """
     cleaned = []
     for sent in tokenized: 
-        psalm_id = re.match("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", sent)
+        verse_id = re.match("[1-9][0-9]{0,2}:[1-9][0-9]{0,2}\.", sent)
 
-        if not psalm_id:
+        if not verse_id:
             cleaned.append(sent)
 
     return cleaned
 
 
-def psalm_tokenize(text, testament_title, book_id, book_title, psalm_id):
-    """ Tokenize the text into the given psalms """
-    psalms = []
+def verse_tokenize(text, testament_title, book_id, book_title, verse_id):
+    """ Tokenize the text into the given bible verses """
+    verses = []
 
     indices = []
     values = []
@@ -154,18 +154,18 @@ def psalm_tokenize(text, testament_title, book_id, book_title, psalm_id):
         values.append(match.group())
 
     for i, idx in enumerate(indices):
-        psalm = values[i]
+        verse = values[i]
         start = idx 
         end = len(text)-1 if i == len(indices)-1 else indices[i+1]
 
-        psalm_id_pos = re.search(pattern, text[start:end]) # remove psalm identifier from the full text
-        start = start + psalm_id_pos.end()
-        psalm_text = text[start:end].strip()
+        verse_id_pos = re.search(pattern, text[start:end]) # remove bible verse identifier from the full text
+        start = start + verse_id_pos.end()
+        verse_text = text[start:end].strip()
 
-        psalms.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "psalm_id": f"p_{psalm_id}", "psalm": psalm, "#chars": len(psalm_text), "#words": len(word_tokenize(psalm_text)), "text": psalm_text})
-        psalm_id += 1
+        verses.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "verse_id": f"p_{verse_id}", "bible_verse": verse, "#chars": len(verse_text), "#words": len(word_tokenize(verse_text)), "text": verse_text})
+        verse_id += 1
 
-    return psalms, psalm_id
+    return verses, verse_id
 
 
 def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
@@ -173,7 +173,7 @@ def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
     sentences = [] 
 
     tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
-    cleaned_tokens = delete_psalm_identifiers(tokens)
+    cleaned_tokens = delete_verse_identifiers(tokens)
 
     for sent in cleaned_tokens:
         sentences.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "id": f"s_{sentence_id}", "#characters": len(sent), "#words": len(word_tokenize(sent)), "sentence": sent})
@@ -182,11 +182,11 @@ def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
     return sentences, sentence_id
 
 
-def write_testament(books, testaments, titles, tokenization="psalms"): 
+def write_testament(books, testaments, titles, tokenization="verses"): 
     """ Write the testament data and all its book to files """
     data = []
     sentence_id = 1
-    psalm_id = 1
+    verse_id = 1
 
     for num, testament in enumerate(testaments):
         texts = get_book_text(books[num], testament)
@@ -202,8 +202,8 @@ def write_testament(books, testaments, titles, tokenization="psalms"):
                 sentences, sentence_id = sentence_tokenize(text, testament_title, book_id, title_modified, sentence_id)
                 data += sentences
             else: 
-                psalms, psalm_id = psalm_tokenize(text, testament_title, book_id, title_modified, psalm_id)
-                data += psalms
+                verses, verse_id = verse_tokenize(text, testament_title, book_id, title_modified, verse_id)
+                data += verses
 
     df = pd.DataFrame(data=data)
     df.to_csv(file_name)
@@ -224,7 +224,7 @@ def main():
         old_books = get_books(old_toc, old_testament)
         new_books = get_books(new_toc, new_testament)
 
-        write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "psalms")
+        write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "verses")
         # write_testament([old_books, new_books], [old_testament, new_testament], ["old", "new"], "sentences")
 
 
