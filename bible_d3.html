@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- load the d3.js library -->
+  <title>Bible Verses</title>
+</head>
+<body>
+  <style>
+    svg {
+      padding: 10 10 10 10px;
+    }
+
+    div.tooltip {
+      position: absolute;
+      text-align: center;
+      width: 70px;
+      height: 28px;
+      padding: 2px;
+      font: 10px sans-serif;
+      background: rgb(198, 206, 218);
+      border: 0px;
+      border-radius: 8px;
+      pointer-events: none;
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+
+    function getXPos(prev, s, m) {
+      var successor_x = +d3.select(`rect#${prev.verse_id}`).attr('x');
+      return (successor_x + s) > width ? 0 : successor_x + s + m;
+    }
+
+    function getYPos(prev, s, m) {
+      var successor_x = +d3.select(`rect#${prev.verse_id}`).attr('x');
+      var successor_y = +d3.select(`rect#${prev.verse_id}`).attr('y');
+      return (successor_x + s) > width ? successor_y + s + m : successor_y;
+    }
+
+    function drawLinearUnits(units) {
+      var unit_size = 10;
+      var x = 0;
+      var y = 0;
+      var m = 2;
+
+      svg.selectAll('rect.unit')
+        .data(units)
+        .enter().append('rect')
+        .attr("id", d => d.verse_id)
+        .attr('width', unit_size)
+        .attr('height', unit_size)
+        .attr('x', (d, i) => (i !== 0) ? getXPos(units[i-1], unit_size, m) : x )
+        .attr('y', (d, i) => (i !== 0) ? getYPos(units[i-1], unit_size, m) : y )
+        .attr('stroke', 'none')
+        .attr('fill', d => d.book_id === "b_1" ? '#FF0000' : '#0000FF')
+        .on('mouseover', function(e, d) {
+          console.log('mouse over.');
+        })
+        .on('mouseout', function(e, d) {
+          console.log('mouse out.');
+        });
+    }
+
+    // main:
+    var file = 'test_subset.csv';
+
+    var width = 0.75 * window.innerWidth;
+    var height = 1.2 * window.innerHeight;
+
+    var svg = d3.select('body').append('svg').attr('width', width).attr('height', height) // vis svg
+    // var div = d3.select("body").append("div")
+    //   .attr("class", "tooltip")
+    //   .style("opacity", 0);
+
+    d3.csv(file).then(function(data) {
+      console.log(data);
+
+      var sorted = data.sort(function(a, b) {
+        return d3.descending(+a['#words'], +b['#words']);
+      });
+
+      console.log(sorted);
+
+      drawLinearUnits(sorted);
+
+
+    });
+
+  </script>
+</body>
+</html>
