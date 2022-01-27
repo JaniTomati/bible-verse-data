@@ -8,7 +8,7 @@
 <body>
   <style>
     svg {
-      padding: 10 10 10 10px;
+      padding: 20 20 20 20px;
     }
 
     div.tooltip {
@@ -27,6 +27,37 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
 
+    /* Get the first or tertiary quantile of an array */
+    function getQuartile(data, quartile, attribute) {
+      var sorted = data.sort(function(a, b) {
+        return d3.ascending(+a[attribute], +b[attribute]);
+      });
+
+      var n = data.length;
+      var quartile_pos = (quartile === "q1") ? (n+1) * 1/4 : (n+1) * 3/4;
+
+      var quartile = undefined;
+      if (Number.isInteger(quartile_pos)) {
+        quartile = data[quartile_pos][attribute];
+      } else {
+        var first = Math.floor(quartile_pos);
+        var second = Math.ceil(quartile_pos);
+        quartile = (data[first][attribute] + data[second][attribute]) / 2;
+      }
+
+      return quartile;
+    }
+
+    /* Calculate Inter Quartile range of a data attribute */
+    function IQR(data, attribute) {
+      return getQuartile(data, "q3", attribute) - getQuartile(data, "q1", attribute);
+    }
+
+    /* Calculate the bin width for a historgram plot */
+    function freedmanDiaconis(data, attribute) {
+      return Math.ceil(2 * IQR(data, attribute) / Math.cbrt(data.length));
+    }
+
     function getXPos(prev, s, m) {
       var successor_x = +d3.select(`rect#${prev.verse_id}`).attr('x');
       return (successor_x + s) > width ? 0 : successor_x + s + m;
@@ -38,7 +69,11 @@
       return (successor_x + s) > width ? successor_y + s + m : successor_y;
     }
 
-    function drawLinearUnits(units) {
+    function drawLinearUnits(data, attribute) {
+      var units = data.sort(function(a, b) {
+        return d3.ascending(+a[attribute], +b[attribute]);
+      });
+
       var unit_size = 10;
       var x = 0;
       var y = 0;
@@ -53,20 +88,46 @@
         .attr('x', (d, i) => (i !== 0) ? getXPos(units[i-1], unit_size, m) : x )
         .attr('y', (d, i) => (i !== 0) ? getYPos(units[i-1], unit_size, m) : y )
         .attr('stroke', 'none')
-        .attr('fill', d => d.book_id === "b_1" ? '#FF0000' : '#0000FF')
+        .attr('fill', d => d.book_id === "b_1" ? '#b2df8a' : '#1f78b4')
         .on('mouseover', function(e, d) {
-          console.log('mouse over.');
+          // console.log(d.verse_id);
         })
         .on('mouseout', function(e, d) {
-          console.log('mouse out.');
+          // console.log(d.verse_id);
         });
     }
 
+    function drawHistogramUnits(data, attribute) {
+      var bin_width = freedmanDiaconis(data, "#words");
+      var num_bins = getBins(data, bin_width);
+
+      var indices = []
+      for (var i = 0; i < num_bins; i++)
+        indices.push(i * bin_width);
+      console.log(indices);
+    }
+
+    function getBins(data, width) {
+      return Math.ceil(data.length / Math.ceil(width));
+    }
+
+    // A function that update the chart
+    function update(selectedGroup) {
+      console.log("hey")
+
+      var sorted = data.sort(function(a, b) {
+        return d3.ascending(+a[selectedGroup], +b[selectedGroup]);
+      });
+
+      drawLinearUnits(sorted);
+    }
+
+
     // main:
-    var file = 'test_subset.csv';
+    var file = 'data/csv/test_subset.csv';
 
     var width = 0.75 * window.innerWidth;
-    var height = 1.2 * window.innerHeight;
+    var height = 1.25 * window.innerHeight;
 
     var svg = d3.select('body').append('svg').attr('width', width).attr('height', height) // vis svg
     // var div = d3.select("body").append("div")
@@ -74,19 +135,24 @@
     //   .style("opacity", 0);
 
     d3.csv(file).then(function(data) {
-      console.log(data);
+      var sortBy = ["verse_id", "#words", "#chars"];
 
-      var sorted = data.sort(function(a, b) {
-        return d3.descending(+a['#words'], +b['#words']);
-      });
+      // add the options to the button
+      d3.select("#selectButton")
+        .selectAll('myOptions')
+       	.data(sortBy)
+        .enter()
+      	.append('option')
+        .text(function (d) { return d; }) // text showed in the menu
+        .attr("value", function (d) { return d; }) // corresponding value returned by the button
 
-      console.log(sorted);
-
-      drawLinearUnits(sorted);
-
-
+      drawLinearUnits(data, "#words");
+      drawHistogramUnits(data, "#words");
     });
 
   </script>
+
+  <select id="selectButton"></select>
+
 </body>
 </html>
