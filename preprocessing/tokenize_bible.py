@@ -193,7 +193,7 @@ def write_testament(books, testaments, titles, tokenization="verses"):
         testament_title = f"{titles[num]}_testament"
 
         for i, (book, text) in enumerate(texts.items()):
-            file_name = f"bible_{tokenization}.csv"
+            file_name = f"../data/csv/bible_{tokenization}.csv"
             book_id = f"b_{len(books[num-1]) + i + 1}" if num != 0 else f"b_{i+1}"
             title_modified = book.lower().replace(" ", "_")
 
@@ -205,8 +205,36 @@ def write_testament(books, testaments, titles, tokenization="verses"):
                 verses, verse_id = verse_tokenize(text, testament_title, book_id, title_modified, verse_id)
                 data += verses
 
+    data = lexical_novelty(data)
     df = pd.DataFrame(data=data)
     df.to_csv(file_name)
+
+
+def lexical_novelty(data): 
+    """ Implementation of a simple metric for lexical novelty """
+    novelty_threshold = 0.25
+    decay_rate = 0.25
+
+    novelty = 0 
+    seen_words = []
+
+    for text_info in data: 
+        words = word_tokenize(text_info["text"])
+        novel_words = 0
+        for word in words: 
+            if word not in seen_words: 
+                novel_words += 1 
+                seen_words.append(word)
+
+        if novel_words / len(words) >= novelty_threshold: 
+            novelty = 1
+        else: 
+            if novelty > 0: 
+                novelty -= decay_rate
+
+        text_info["novelty"] = novelty
+    
+    return data
 
 
 def main():
