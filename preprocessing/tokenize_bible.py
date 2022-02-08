@@ -205,9 +205,22 @@ def write_testament(books, testaments, titles, tokenization="verses"):
                 verses, verse_id = verse_tokenize(text, testament_title, book_id, title_modified, verse_id)
                 data += verses
 
+    data = lexical_richness(data)
     data = lexical_novelty(data)
+
     df = pd.DataFrame(data=data)
     df.to_csv(file_name)
+
+
+def lexical_richness(data): 
+    """ Implementation of the TTR metric to measure lexical richness """
+    for text_info in data: 
+        tokens = word_tokenize(text_info["text"])
+        types = set(tokens)
+
+        text_info["TTR"] = len(types) / len(tokens)
+
+    return data
 
 
 def lexical_novelty(data): 
