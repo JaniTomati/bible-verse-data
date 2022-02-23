@@ -18,6 +18,6 @@ Alternatively, the option to split the text into its individual sentences is giv
 * lexical_richness := Type-Token Ratio of a verse
 * lexical_novelty := [Lexical Novelty](https://datamining.typepad.com/data_mining/2011/09/visualizing-lexical-novelty-in-literature.html)[^3] of a verse in a book
 
-[^1]: Sentences that are not part of a verse are not in the dataset.
+[^1]: Sentences that are not part of a verse are not included in the dataset.
 [^2]: Challoner's revised Douay-Rheims Version (Old Testament 1609 & 1610, New Testament 1582). The Whole Revised and Diligently Compared with the Latin Vulgate by Bishop Richard Challoner A.D. 1749-1752, EBook-No. 8300.
 [^3]: Hurst, M. (2011). Visualizing Lexical Novelty in Literature. URL [https://datamining.typepad.com/data_mining/2011/09/visualizing-lexical-novelty-in-literature.html](https://datamining.typepad.com/data_mining/2011/09/visualizing-lexical-novelty-in-literature.html).
