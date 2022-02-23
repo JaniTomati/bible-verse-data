@@ -144,7 +144,6 @@ def delete_verse_identifiers(tokenized):
 
 def verse_tokenize(text, testament_title, book_id, book_title, verse_id):
     """ Tokenize the text into the given bible verses """
-    print("Tokenizing text into verses...")
     verses = []
 
     indices = []
@@ -164,7 +163,7 @@ def verse_tokenize(text, testament_title, book_id, book_title, verse_id):
         start = start + verse_id_pos.end()
         verse_text = text[start:end].strip()
 
-        verses.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "verse_id": f"p_{verse_id}", "bible_verse": verse, "#chars": len(verse_text), "#words": len(word_tokenize(verse_text)), "text": verse_text})
+        verses.append({"testament_title": testament_title, "book_id": book_id, "book_title": book_title, "verse_id": f"v_{verse_id}", "bible_verse": verse, "#chars": len(verse_text), "#words": len(word_tokenize(verse_text)), "text": verse_text})
         verse_id += 1
 
     return verses, verse_id
@@ -172,7 +171,6 @@ def verse_tokenize(text, testament_title, book_id, book_title, verse_id):
 
 def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
     """ Tokenize the text into sentences """
-    print("Tokenizing text into sentences...")
     sentences = [] 
 
     tokens = sent_tokenize(text) # has issues tokenize a handful of cases 
@@ -187,6 +185,8 @@ def sentence_tokenize(text, testament_title, book_id, book_title, sentence_id):
 
 def write_testament(books, testaments, titles, tokenization="verses"): 
     """ Write the testament data and all its book to files """
+    print(f"Tokenizing text into {tokenization}...")
+    
     data = []
     sentence_id = 1
     verse_id = 1
