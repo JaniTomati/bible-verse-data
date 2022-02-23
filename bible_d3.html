@@ -79,6 +79,11 @@
       var y = 0;
       var m = 2;
 
+
+      var scaleAnomalyPuOr = d3.scaleDiverging()
+        .domain([0, 0.5, 1])
+        .interpolator(d3.interpolatePuOr)
+
       svg.selectAll('rect.unit')
         .data(units)
         .enter().append('rect')
@@ -88,33 +93,113 @@
         .attr('x', (d, i) => (i !== 0) ? getXPos(units[i-1], unit_size, m) : x )
         .attr('y', (d, i) => (i !== 0) ? getYPos(units[i-1], unit_size, m) : y )
         .attr('stroke', 'none')
-        .attr('fill', d => d.book_id === "b_1" ? '#b2df8a' : '#1f78b4')
+        // .attr('fill', d => d.book_id === "b_1" ? '#b2df8a' : '#1f78b4')
+        .attr('fill', d => scaleAnomalyPuOr(+d.TTR))
         .on('mouseover', function(e, d) {
-          // console.log(d.verse_id);
+          console.log(d.text);
         })
         .on('mouseout', function(e, d) {
           // console.log(d.verse_id);
         });
     }
 
-    function drawHistogramUnits(data, attribute) {
-      var bin_width = freedmanDiaconis(data, "#words");
-      var num_bins = getBins(data, bin_width);
-
-      var indices = []
-      for (var i = 0; i < num_bins; i++)
-        indices.push(i * bin_width);
-      console.log(indices);
+    function getBins(max, width) {
+      return Math.ceil(max / Math.ceil(width));
     }
 
-    function getBins(data, width) {
-      return Math.ceil(data.length / Math.ceil(width));
+    function getBarPositions(num_bins, bin_width, unit_size, m) {
+      var indices = [];
+
+      var num_units_per_bin = 6; 
+      var bin_margin = 10; 
+
+      var start = 0;
+      var end = start + num_units_per_bin * (unit_size + m);
+
+      for (var i = 0; i < num_bins; i++) {
+        indices.push({'values': [i * bin_width, (i+1) * bin_width-1], 'start': start, 'end': end, 'last_x': undefined, 'last_y': undefined});
+        start = end + bin_margin;
+        end = start + num_units_per_bin * (unit_size + m);
+      }
+
+      return indices;
+    }
+
+    // function getBinPosition(d, attribute, unit_size, bar_info) {
+    //   count = 0
+    //   for (var info of bar_info) {
+    //     var bin_width = +info.end - +info.start; 
+    //     if (d[attribute] >= info.values[0] && d[attribute] <= info.values[1]) {
+    //       if (info.last_x === undefined) {
+    //         info.last_x = +info.start; 
+    //         info.last_y = 0;
+    //       } else if (+info.last_x + unit_size > +info.end) {
+    //         info.last_x = +info.start;
+    //         info.last_y = +info.last_y + unit_size; 
+    //       } else { 
+    //         info.last_x = +info.x + unit_size; 
+    //       }
+    //       return [+info.last_x, +info.last_y];
+    //     } 
+    //   }
+    // }
+
+    function drawHistogramUnits(data, attribute) {
+      var unit_size = 10;
+      var x = 0;
+      var y = 0;
+      var m = 2;
+
+      var bin_width = freedmanDiaconis(data, attribute);
+      var max = d3.max(data, function(d) { return +d[attribute]; });
+      console.log("Max", max);
+      var num_bins = getBins(max, bin_width);
+
+      var bar_indices = getBarPositions(num_bins, bin_width, unit_size, m);
+      console.log(bar_indices); // here 
+
+      var scaleAnomalyPuOr = d3.scaleDiverging()
+        .domain([0, 0.5, 1])
+        .interpolator(d3.interpolatePuOr)
+
+      console.log(attribute);
+
+      svg.selectAll('rect.unit')
+        .data(data)
+        .enter().append('rect')
+        .attr("id", d => d.verse_id)
+        .attr('width', unit_size)
+        .attr('height', unit_size)
+        // .attr('x', (d, i) => getBinPosition(d, attribute, unit_size, bar_indices)[0])
+        // .attr('y', (d, i) => getBinPosition(d, attribute, unit_size, bar_indices)[1])
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('stroke', 'none')
+        .attr('fill', d => scaleAnomalyPuOr(+d.TTR))
+        .on('mouseover', function(e, d) {
+          console.log(d['#chars']);
+        })
+        .on('mouseout', function(e, d) {
+          // console.log(d.verse_id);
+        });
+
+
+      // var scale = d3.scaleLinear()
+      //              .domain([d3.min(data), d3.max(data)])
+      //              .range([0, (3*(unit_size+m) * num_bins)]);
+      //
+      // // Add scales to axis
+      // var x_axis = d3.axisLeft()
+      //                 .scale(scale);
+      //
+      // //Append group and insert axis
+      // svg.append("g")
+      //   .attr("transform", "translate(50, 10)")
+      //   .call(x_axis);
     }
 
     // A function that update the chart
     function update(selectedGroup) {
-      console.log("hey")
-
       var sorted = data.sort(function(a, b) {
         return d3.ascending(+a[selectedGroup], +b[selectedGroup]);
       });
@@ -127,7 +212,7 @@
     var file = 'data/csv/test_subset.csv';
 
     var width = 0.75 * window.innerWidth;
-    var height = 1.25 * window.innerHeight;
+    var height = 2.0 * window.innerHeight;
 
     var svg = d3.select('body').append('svg').attr('width', width).attr('height', height) // vis svg
     // var div = d3.select("body").append("div")
@@ -147,6 +232,7 @@
         .attr("value", function (d) { return d; }) // corresponding value returned by the button
 
       drawLinearUnits(data, "#words");
+      svg.selectAll("*").remove();
       drawHistogramUnits(data, "#words");
     });
 
